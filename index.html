@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Bubble Wrap App</title>
+    <meta name="theme-color" content="#667eea">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Bubble Wrap">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🫧</text></svg>">
+    <link rel="manifest" href="manifest.json">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: fixed;
+            width: 100%;
+            height: 100%;
+        }
+
+        header {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 0.75rem 1rem;
+            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.1);
+            z-index: 100;
+        }
+
+        .header-content {
+            max-width: 100%;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        h1 {
+            color: white;
+            font-size: 1.25rem;
+            font-weight: 700;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .stats {
+            display: flex;
+            gap: 0.75rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .stat-item {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 0.4rem 1rem;
+            border-radius: 20px;
+            color: white;
+            font-weight: 600;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .stat-value {
+            font-size: 1rem;
+            font-weight: 700;
+        }
+
+        main {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 0.5rem;
+            overflow: hidden;
+        }
+
+        .bubble-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(45px, 1fr));
+            gap: 6px;
+            width: 100%;
+            max-width: 100%;
+            padding: 0.75rem;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(5px);
+            border-radius: 15px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            overflow-y: auto;
+            max-height: calc(100vh - 180px);
+        }
+
+        .bubble {
+            width: 45px;
+            height: 45px;
+            background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.8), rgba(200, 200, 255, 0.6));
+            border-radius: 50%;
+            cursor: pointer;
+            position: relative;
+            transition: all 0.3s ease;
+            box-shadow: 
+                inset -2px -2px 5px rgba(0, 0, 0, 0.1),
+                inset 2px 2px 5px rgba(255, 255, 255, 0.5),
+                0 4px 8px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+            touch-action: manipulation;
+        }
+
+        .bubble::before {
+            content: '';
+            position: absolute;
+            top: 10%;
+            left: 20%;
+            width: 30%;
+            height: 30%;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.9), transparent);
+            border-radius: 50%;
+        }
+
+        .bubble:active {
+            transform: scale(0.95);
+        }
+
+        .bubble.popping {
+            animation: pop 0.3s ease-out forwards;
+        }
+
+        @keyframes pop {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.3); }
+            100% { transform: scale(0); opacity: 0; }
+        }
+
+        .particle {
+            position: absolute;
+            width: 6px;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 50%;
+            pointer-events: none;
+            animation: particle-fly 0.6s ease-out forwards;
+        }
+
+        @keyframes particle-fly {
+            to {
+                transform: translate(var(--x), var(--y)) scale(0);
+                opacity: 0;
+            }
+        }
+
+        .controls {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            display: flex;
+            gap: 0.5rem;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 0.75rem;
+            box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.2);
+            justify-content: center;
+            flex-wrap: wrap;
+            z-index: 100;
+        }
+
+        .btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            padding: 0.6rem 1rem;
+            border-radius: 20px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            font-size: 0.85rem;
+            touch-action: manipulation;
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .sound-toggle {
+            position: fixed;
+            top: 0.75rem;
+            right: 0.75rem;
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            border: none;
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            z-index: 101;
+        }
+
+        .combo-indicator {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.3s ease;
+            z-index: 200;
+        }
+
+        .combo-indicator.show {
+            animation: combo-pop 1s ease-out;
+        }
+
+        @keyframes combo-pop {
+            0% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+            50% { opacity: 1; transform: translate(-50%, -50%) scale(1.2); }
+            100% { opacity: 0; transform: translate(-50%, -50%) scale(1); }
+        }
+
+        .install-prompt {
+            position: fixed;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.9);
+            color: #333;
+            padding: 1rem;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+            display: none;
+            z-index: 1000;
+            text-align: center;
+            max-width: 90%;
+        }
+
+        .install-prompt button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 5px;
+            margin-top: 0.5rem;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <h1>🫧 Bubble Wrap</h1>
+            <div class="stats">
+                <div class="stat-item">
+                    <span>Popped:</span>
+                    <span class="stat-value" id="popCount">0</span>
+                </div>
+                <div class="stat-item">
+                    <span>Combo:</span>
+                    <span class="stat-value" id="comboCount">0</span>
+                </div>
+                <div class="stat-item">
+                    <span>Best:</span>
+                    <span class="stat-value" id="bestCombo">0</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <div class="bubble-container" id="bubbleContainer"></div>
+    </main>
+
+    <div class="controls">
+        <button class="btn" id="resetBtn">
+            <span>🔄</span>
+            <span>Reset</span>
+        </button>
+        <button class="btn" id="rapidModeBtn">
+            <span>⚡</span>
+            <span>Rapid</span>
+        </button>
+        <button class="btn" id="sizeBtn">
+            <span>📏</span>
+            <span>Size</span>
+        </button>
+    </div>
+
+    <button class="sound-toggle" id="soundToggle">🔊</button>
+    <div class="combo-indicator" id="comboIndicator"></div>
+    <div class="install-prompt" id="installPrompt">
+        <p>Install Bubble Wrap for quick access!</p>
+        <button id="installButton">Install</button>
+    </div>
+
+    <script>
+        class BubbleWrapGame {
+            constructor() {
+                this.container = document.getElementById('bubbleContainer');
+                this.popCount = 0;
+                this.comboCount = 0;
+                this.bestCombo = 0;
+                this.soundEnabled = true;
+                this.rapidMode = false;
+                this.lastPopTime = 0;
+                this.comboTimeout = null;
+                this.deferredPrompt = null;
+                
+                this.init();
+            }
+
+            init() {
+                this.createBubbles();
+                this.setupEventListeners();
+                this.createAudioContext();
+                this.setupPWA();
+                
+                // Prevent zoom on double tap
+                let lastTouchEnd = 0;
+                document.addEventListener('touchend', function (event) {
+                    const now = Date.now();
+                    if (now - lastTouchEnd <= 300) {
+                        event.preventDefault();
+                    }
+                    lastTouchEnd = now;
+                }, false);
+            }
+
+            setupPWA() {
+                window.addEventListener('beforeinstallprompt', (e) => {
+                    e.preventDefault();
+                    this.deferredPrompt = e;
+                    document.getElementById('installPrompt').style.display = 'block';
+                });
+
+                document.getElementById('installButton').addEventListener('click', () => {
+                    if (this.deferredPrompt) {
+                        this.deferredPrompt.prompt();
+                        this.deferredPrompt.userChoice.then(() => {
+                            this.deferredPrompt = null;
+                            document.getElementById('installPrompt').style.display = 'none';
+                        });
+                    }
+                });
+            }
+
+            createAudioContext() {
+                this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+
+            createPopSound() {
+                if (!this.soundEnabled) return;
+                const oscillator = this.audioContext.createOscillator();
+                const gainNode = this.audioContext.createGain();
+                oscillator.connect(gainNode);
+                gainNode.connect(this.audioContext.destination);
+                oscillator.type = 'sine';
+                oscillator.frequency.setValueAtTime(800, this.audioContext.currentTime);
+                oscillator.frequency.exponentialRampToValueAtTime(400, this.audioContext.currentTime + 0.1);
+                gainNode.gain.setValueAtTime(0.3, this.audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.1);
+                oscillator.start();
+                oscillator.stop(this.audioContext.currentTime + 0.1);
+            }
+
+            createBubbles() {
+                const containerWidth = this.container.offsetWidth;
+                const bubbleSize = 45;
+                const gap = 6;
+                const cols = Math.floor(containerWidth / (bubbleSize + gap));
+                this.container.innerHTML = '';
+                this.container.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+                const totalBubbles = cols * 15;
+                for (let i = 0; i < totalBubbles; i++) {
+                    const bubble = document.createElement('div');
+                    bubble.className = 'bubble';
+                    bubble.addEventListener('click', (e) => this.popBubble(e, bubble));
+                    bubble.addEventListener('touchstart', (e) => {
+                        e.preventDefault();
+                        this.popBubble(e, bubble);
+                    });
+                    this.container.appendChild(bubble);
+                }
+            }
+
+            popBubble(event, bubble) {
+                if (bubble.classList.contains('popping')) return;
+                bubble.classList.add('popping');
+                this.createPopSound();
+                this.createParticles(event, bubble);
+                this.popCount++;
+                this.updateCombo();
+                this.updateStats();
+                setTimeout(() => {
+                    bubble.classList.remove('popping');
+                    if (this.rapidMode) {
+                        bubble.style.animation = 'none';
+                        setTimeout(() => bubble.style.animation = '', 10);
+                    }
+                }, 300);
+            }
+
+            createParticles(event, bubble) {
+                const rect = bubble.getBoundingClientRect();
+                const centerX = rect.left + rect.width / 2;
+                const centerY = rect.top + rect.height / 2;
+                for (let i = 0; i < 6; i++) {
+                    const particle = document.createElement('div');
+                    particle.className = 'particle';
+                    particle.style.left = centerX + 'px';
+                    particle.style.top = centerY + 'px';
+                    const angle = (Math.PI * 2 * i) / 6;
+                    const distance = 30 + Math.random() * 20;
+                    particle.style.setProperty('--x', `${Math.cos(angle) * distance}px`);
+                    particle.style.setProperty('--y', `${Math.sin(angle) * distance}px`);
+                    document.body.appendChild(particle);
+                    setTimeout(() => particle.remove(), 600);
+                }
+            }
+
+            updateCombo() {
+                const now = Date.now();
+                if (now - this.lastPopTime < 1000) {
+                    this.comboCount++;
+                    if (this.comboCount > this.bestCombo) this.bestCombo = this.comboCount;
+                    if (this.comboCount > 5) this.showComboIndicator();
+                } else this.comboCount = 1;
+                this.lastPopTime = now;
+                clearTimeout(this.comboTimeout);
+                this.comboTimeout = setTimeout(() => {
+                    this.comboCount = 0;
+                    this.updateStats();
+                }, 1000);
+            }
+
+            showComboIndicator() {
+                const indicator = document.getElementById('comboIndicator');
+                indicator.textContent = `${this.comboCount}x COMBO!`;
+                indicator.classList.remove('show');
+                void indicator.offsetWidth;
+                indicator.classList.add('show');
+            }
+
+            updateStats() {
+                document.getElementById('popCount').textContent = this.popCount;
+                document.getElementById('comboCount').textContent = this.comboCount;
+                document.getElementById('bestCombo').textContent = this.bestCombo;
+            }
+
+            setupEventListeners() {
+                document.getElementById('resetBtn').addEventListener('click', () => {
+                    this.popCount = 0; this.comboCount = 0; this.bestCombo = 0;
+                    this.updateStats(); this.createBubbles();
+                });
+                document.getElementById('rapidModeBtn').addEventListener('click', (e) => {
+                    this.rapidMode = !this.rapidMode;
+                    e.currentTarget.style.background = this.rapidMode ? 
+                        'rgba(255, 255, 255, 0.4)' : 'rgba(255, 255, 255, 0.2)';
+                });
+                document.getElementById('sizeBtn').addEventListener('click', () => {
+                    const bubbles = document.querySelectorAll('.bubble');
+                    bubbles.forEach(bubble => {
+                        const currentSize = parseInt(bubble.style.width) || 45;
+                        const newSize = currentSize === 45 ? 55 : currentSize === 55 ? 35 : 45;
+                        bubble.style.width = `${newSize}px`;
+                        bubble.style.height = `${newSize}px`;
+                    });
+                });
+                document.getElementById('soundToggle').addEventListener('click', (e) => {
+                    this.soundEnabled = !this.soundEnabled;
+                    e.currentTarget.textContent = this.soundEnabled ? '🔊' : '🔇';
+                });
+                window.addEventListener('resize', () => this.createBubbles());
+                window.addEventListener('orientationchange', () => {
+                    setTimeout(() => this.createBubbles(), 100);
+                });
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => new BubbleWrapGame());
+    </script>
+</body>
+</html>
